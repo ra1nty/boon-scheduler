@@ -2,24 +2,29 @@ import json
 import subprocess
 import sys
 import re
-import schedule
 import functools
 from sqlalchemy import create_engine, text
 import select
-def catch_exceptions(job_func, cancel_on_failure=False):
-    @functools.wraps(job_func)
-    def wrapper(*args, **kwargs):
-        try:
-            return job_func(*args, **kwargs)
-        except:
-            import traceback
-            print(traceback.format_exc())
-            if cancel_on_failure:
-                return schedule.CancelJob
-    return wrapper
+import threading
+import time
+import utils
+import signal
+from utils import ScheduleThread
+from config import app_config
 
+scheduler = ScheduleThread()
+
+def keyboardInterruptHandler(signal, frame):
+    scheduler.stop()
+    print("KeyboardInterrupt has been caught. Cleaning up...")
+    exit(0)
+
+signal.signal(signal.SIGINT, keyboardInterruptHandler)
+
+@utils.catch_exceptions
+@utils.with_logging
 def execute(task):
-    module, offset = create_module(task.code)
+    module, offset = create_module(task['code'])
     # executable binary for the Python interpreter
     with subprocess.Popen([sys.executable, '-'],
             stdin=subprocess.PIPE,
@@ -27,6 +32,9 @@ def execute(task):
             stderr=subprocess.PIPE
         ) as process:
         communicate(process, task, module, offset)
+
+def test_job():
+    print('this is job')
 
 def create_module(code):
     lines = ["import json"]
@@ -39,14 +47,14 @@ def communicate(process, task, module, offset):
     if stderr:
         stderr = stderr.decode('utf-8').lstrip().replace(", in <module>", ":")
         stderr = re.sub(r", line(\d+)", lambda match: str(int(match.group(1)) - offset), stderr)
-        print(re.sub(r'File."[^"]+?"', "'{}' has an error on line ".format(task.title), stderr))
+        print(re.sub(r'File."[^"]+?"', "'{}' has an error on line ".format(task['title']), stderr))
         return
     if stdout:
         result = json.loads(stdout.decode("utf-8"))
         print(result)
         #report(task, result, error)
         return
-    print("'{}' produced no result\n".format(task.title))
+    print("'{}' produced no result\n".format(task['title']))
 
 class Map(dict):
     """dot.notation access to dictionary attributes"""
@@ -55,20 +63,20 @@ class Map(dict):
     __delattr__ = dict.__delitem__
 
 if __name__ == "__main__":
-    from config import app_config
-    cfg = app_config['development']
+    cfg = app_config['testing']
     engine = create_engine(cfg.SQLALCHEMY_DATABASE_URI)
     db = engine.connect()
     db.execute(text("LISTEN data;").execution_options(autocommit=True))
     conn = db.connection
+
+    scheduler.start()
+
     while 1:
-        #db.commit()
-        if select.select([conn],[],[],6) != ([],[],[]): # else not ready
+        if select.select([conn],[],[],5) != ([],[],[]): # else not ready
             conn.poll()
             while conn.notifies:
                 notify = conn.notifies.pop()
                 print("{}\n{}\n{}".format(notify.pid, notify.channel, notify.payload))
-    #for line in sys.stdin:
-    #    execute(Map(json.loads(line)))
-    # End of stream!
-    #print('end')
+                scheduler.add.every(10).seconds.do(get_task_by_id(notify.payload))
+        #else:
+            #print("time out")
