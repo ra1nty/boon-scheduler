@@ -18,3 +18,16 @@ class TaskSchema(ma.ModelSchema):
     class Meta:
         model = Task
         fields = ('id', 'title', 'description', 'data', 'owner_id')
+
+task
+
+id
+title
+description
+code
+result
+owner_id
+created_at
+status
+period
+last_run
