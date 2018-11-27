@@ -52,9 +52,9 @@ def communicate(process, task, module, offset):
         return
     print("'{}' produced no result\n".format(task['title']))
 
-if __name__ == "__main__":
+def run_app(mode):
     from utils.db import init_trigger
-    conn = init_trigger()
+    conn = init_trigger(mode)
 
     scheduler.start()
 
@@ -77,3 +77,6 @@ if __name__ == "__main__":
                 #print(rs)
         #else:
             #print("time out")
+
+if __name__ == "__main__":
+    run_app('testing')
