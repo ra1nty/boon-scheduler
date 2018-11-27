@@ -2,19 +2,25 @@ import json
 import subprocess
 import sys
 import re
-from sqlalchemy import text
 import select
 import signal
-from utils.schedule import ScheduleThread, catch_exceptions, with_logging
-from config import app_config
+from datetime import datetime
+from sqlalchemy import text
+
+from .config import app_config
+from .utils.schedule import ScheduleThread, catch_exceptions, with_logging
+from .utils.db import init_trigger
+from .utils.report import report
 
 scheduler = ScheduleThread()
 
 def keyboardInterruptHandler(signal, frame):
+    """Handler for keyboardInterrupt, stop all threads and clean up"""
     scheduler.stop()
     print("KeyboardInterrupt has been caught. Cleaning up...")
     exit(0)
 
+# Register the handler
 signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
 @catch_exceptions
@@ -29,11 +35,8 @@ def execute(task):
         ) as process:
         communicate(process, task, module, offset)
 
-def test_job():
-    print('this is job')
-
 def create_module(code):
-    lines = ["import json"]
+    lines = ["import json", "result = dict()"]
     offset = len(lines) + 1
     outputLine = "\nprint(json.dumps(result))"
     return "\n".join(lines) + "\n" + code + outputLine, offset
@@ -47,15 +50,13 @@ def communicate(process, task, module, offset):
         return
     if stdout:
         result = json.loads(stdout.decode("utf-8"))
-        print(result)
-        #report(task, result, error)
+        report(task, result)
         return
     print("'{}' produced no result\n".format(task['title']))
 
 def run_app(mode):
-    from utils.db import init_trigger
+    """Run the app with the given mode"""
     conn = init_trigger(mode)
-
     scheduler.start()
 
     while 1:
@@ -63,18 +64,10 @@ def run_app(mode):
             conn.poll()
             while conn.notifies:
                 notify = conn.notifies.pop()
-                print("{}\n{}\n{}".format(notify.pid, notify.channel, notify.payload))
-                #task = get_task_by_id(notify.payload)
-                #period = get_period_by_id(notify.payload)
-                #scheduler.add.every(period).seconds.do(execute(task))
-                pld = json.loads(notify.payload)
-                pld['code'] = pld['data']
-                period = 5
-                scheduler.add.every(period).seconds.do(execute(pld))
-                execute(pld)
-                #sql = "SELECT data FROM task WHERE id = '"+ixd+"\'"
-                #rs = db.execute(sql).fetchone()
-                #print(rs)
+                #print("{}\n{}\n{}".format(notify.pid, notify.channel, notify.payload))
+                task = json.loads(notify.payload)
+                print("{}\n New task : {}".format(str(datetime.now()),task['title']))
+                scheduler.add.every(task['period']).seconds.do(execute, task)
         #else:
             #print("time out")
 

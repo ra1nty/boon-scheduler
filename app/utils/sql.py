@@ -20,7 +20,7 @@ end;
 $$;
 
 CREATE TRIGGER task_modified
-        AFTER INSERT OR UPDATE
+        AFTER INSERT
             ON task
         FOR EACH ROW
             EXECUTE PROCEDURE notify_task('data');

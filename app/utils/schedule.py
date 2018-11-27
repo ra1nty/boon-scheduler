@@ -33,7 +33,7 @@ class ScheduleThread(threading.Thread):
         """Helper method for adding task"""
         return self.scheduler
 
-def catch_exceptions(job_func, cancel_on_failure=False):
+def catch_exceptions(job_func, cancel_on_failure=True):
     """Decorator for the catch exception utility in scheduler
     Args:
         job_func: the original function being wrapped
