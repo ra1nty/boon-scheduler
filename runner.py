@@ -2,14 +2,10 @@ import json
 import subprocess
 import sys
 import re
-import functools
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 import select
-import threading
-import time
-import utils
 import signal
-from utils import ScheduleThread
+from utils.schedule import ScheduleThread, catch_exceptions, with_logging
 from config import app_config
 
 scheduler = ScheduleThread()
@@ -21,8 +17,8 @@ def keyboardInterruptHandler(signal, frame):
 
 signal.signal(signal.SIGINT, keyboardInterruptHandler)
 
-@utils.catch_exceptions
-@utils.with_logging
+@catch_exceptions
+@with_logging
 def execute(task):
     module, offset = create_module(task['code'])
     # executable binary for the Python interpreter
@@ -56,18 +52,9 @@ def communicate(process, task, module, offset):
         return
     print("'{}' produced no result\n".format(task['title']))
 
-class Map(dict):
-    """dot.notation access to dictionary attributes"""
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
 if __name__ == "__main__":
-    cfg = app_config['testing']
-    engine = create_engine(cfg.SQLALCHEMY_DATABASE_URI)
-    db = engine.connect()
-    db.execute(text("LISTEN data;").execution_options(autocommit=True))
-    conn = db.connection
+    from utils.db import init_trigger
+    conn = init_trigger()
 
     scheduler.start()
 
@@ -77,6 +64,16 @@ if __name__ == "__main__":
             while conn.notifies:
                 notify = conn.notifies.pop()
                 print("{}\n{}\n{}".format(notify.pid, notify.channel, notify.payload))
-                scheduler.add.every(10).seconds.do(get_task_by_id(notify.payload))
+                #task = get_task_by_id(notify.payload)
+                #period = get_period_by_id(notify.payload)
+                #scheduler.add.every(period).seconds.do(execute(task))
+                pld = json.loads(notify.payload)
+                pld['code'] = pld['data']
+                period = 5
+                scheduler.add.every(period).seconds.do(execute(pld))
+                execute(pld)
+                #sql = "SELECT data FROM task WHERE id = '"+ixd+"\'"
+                #rs = db.execute(sql).fetchone()
+                #print(rs)
         #else:
             #print("time out")

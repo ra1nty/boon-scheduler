@@ -1,4 +1,4 @@
-begin;
+ADD_TRIGGER = '''begin;
 
 create or replace function notify_task ()
  returns trigger
@@ -12,7 +12,7 @@ begin
     (
        select NEW.id
     )
-    select pg_notify(channel, row_to_json(payload)::text)
+    select pg_notify(channel, row_to_json(NEW.*)::text)
        from payload
   );
   RETURN NULL;
@@ -26,3 +26,4 @@ CREATE TRIGGER task_modified
             EXECUTE PROCEDURE notify_task('data');
 
 commit;
+'''

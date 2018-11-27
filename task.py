@@ -33,3 +33,9 @@ period
 last_run
 
 https://gist.github.com/bruth/6d53a3c2138c5adf53f5
+
+class Map(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
