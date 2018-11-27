@@ -51,7 +51,6 @@ def keyboardInterruptHandler(sig, frame):
     app_process.join()
     print("Dropping tables")
     Base.metadata.drop_all()
-    exit(0)
 
 # Register the handler
 signal.signal(signal.SIGINT, keyboardInterruptHandler)
