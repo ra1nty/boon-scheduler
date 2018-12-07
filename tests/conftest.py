@@ -19,16 +19,20 @@ def init_tests():
     with session_scope() as session:
         user = User(username = "testuser1", email = "testuser1@illinois.edu", password='random')
         session.add(user)
+
+        # Test for recording sequence data
         test = Task(title = "test1", 
             description = "test1",
-            code = "\nresult=[12.34, 32.56]\n\n",
+            code = "import time\n\nresult=[12.34, 32.56]\n\n",
             owner_id = 1,
             data = [],
             period = 10
         )
+        
+        # Test for recording sequence dictionary
         testcode2 = [
             'from datetime import datetime',
-            'result["time"] = str(datetime.now())',
+            'result[\'time\'] = str(datetime.now())',
             '#print(str(datetime.now()))'
         ]
         test2 = Task(title = "test2", 
@@ -38,8 +42,19 @@ def init_tests():
             data = [],
             period = 30
         )
+        
+        # Test for Job cancelling
+        test3 = Task(title = "test3", 
+            description = "test3",
+            code = "\naaaaaaaaasdasdacsascascsca",
+            owner_id = 1,
+            data = [],
+            period = 10
+        )
+
         session.add(test)
         session.add(test2)
+        session.add(test3)
 
 def pytest_sessionfinish(session, exitstatus):
     app_process.join()

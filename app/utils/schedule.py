@@ -48,6 +48,7 @@ def catch_exceptions(job_func, cancel_on_failure=True):
             import traceback
             print(traceback.format_exc())
             if cancel_on_failure:
+                print('LOG: Job "%s" cancelled' % args[0]['title'])
                 return schedule.CancelJob
     return wrapper
 
@@ -55,8 +56,8 @@ def with_logging(func):
     """Decorator for the logging utility in scheduler"""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        print('LOG: Running job "%s"' % func.__name__)
+        print('LOG: Running job "%s"' % args[0]['title'])
         result = func(*args, **kwargs)
-        print('LOG: Job "%s" completed' % func.__name__)
+        print('LOG: Job "%s" completed' % args[0]['title'])
         return result
     return wrapper
