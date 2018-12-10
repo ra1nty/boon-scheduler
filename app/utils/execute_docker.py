@@ -20,8 +20,8 @@ def excute_with_docker(task):
             stdout=True, # record stdout
             stderr=True, # record stderr
             labels={"title": task['title']}, # label our docker container
-            mem_limit='100m',
-            ulimits=[nproc_limit, cpu_limit]
+            #mem_limit='100m',
+            #ulimits=[nproc_limit, cpu_limit]
         )
         result = json.loads(log.decode("utf-8"))
         report(task, result)

@@ -23,7 +23,7 @@ def init_tests():
         # Test for recording sequence data
         test = Task(title = "test1", 
             description = "test1",
-            code = "import time\n\nresult=[12.34, 32.56]\n\n",
+            code = "import time\ntime.sleep(10)\nresult=[12.34, 32.56]\n\n",
             owner_id = 1,
             data = [],
             period = 10
